@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bellartes — Migração de Dados</title>
+<style>
+  body { font-family: sans-serif; max-width: 600px; margin: 60px auto; padding: 20px; background: #FAF7F2; color: #2D2420; }
+  h1 { color: #8B4A53; }
+  .card { background: white; border-radius: 12px; padding: 24px; margin-bottom: 20px; box-shadow: 0 2px 12px rgba(0,0,0,0.08); }
+  .log { background: #1a1a1a; color: #00ff88; font-family: monospace; font-size: 13px; padding: 16px; border-radius: 8px; height: 280px; overflow-y: auto; white-space: pre-wrap; }
+  button { background: #8B4A53; color: white; border: none; padding: 14px 28px; border-radius: 8px; font-size: 15px; cursor: pointer; width: 100%; margin-top: 12px; }
+  button:disabled { background: #ccc; cursor: not-allowed; }
+  .ok  { color: #00ff88; }
+  .err { color: #ff4444; }
+  .info{ color: #ffcc00; }
+</style>
+</head>
+<body>
+<h1>🔥 Migração de Dados — Espaço Bellartes</h1>
+
+<div class="card">
+  <p><strong>Esta página sobe todos os dados para o Firebase uma única vez.</strong><br>
+  Abra esta página, clique no botão e aguarde a conclusão. Depois pode fechar.</p>
+  <div class="log" id="log">Aguardando início...\n</div>
+  <button id="btnMigrar" onclick="iniciarMigracao()">▶ Iniciar Migração</button>
+</div>
+
+<script>
+const eventos = [
+  {id:1,  data:'2025-12-31', cliente:'Igreja Fonte',          tipo:'Final de Ano',                     valor:1300, pago:1300,   saldo:0,      pgto:'Pix',    contrato:'',    status:'Pago', obs:''},
+  {id:2,  data:'2026-02-13', cliente:'BellArtes',             tipo:'Festa Fantasia',                   valor:450,  pago:450,    saldo:0,      pgto:'Pix',    contrato:'',    status:'Pago', obs:'Bilheteria/Plateia'},
+  {id:3,  data:'2026-03-14', cliente:'Adilson',               tipo:'Espetáculo',                       valor:450,  pago:450,    saldo:0,      pgto:'Pix',    contrato:'',    status:'',     obs:'Bilheteria/Plateia'},
+  {id:4,  data:'2026-03-15', cliente:'Adilson',               tipo:'Espetáculo',                       valor:0,    pago:0,      saldo:0,      pgto:'Pix',    contrato:'',    status:'',     obs:'Bilheteria/Plateia'},
+  {id:5,  data:'2026-03-27', cliente:'BellArtes',             tipo:'Peça de Páscoa',                   valor:720,  pago:720,    saldo:0,      pgto:'Pix',    contrato:'',    status:'',     obs:''},
+  {id:6,  data:'2026-04-02', cliente:'Leonardo Castilho',     tipo:'Evento Religioso',                 valor:450,  pago:450,    saldo:0,      pgto:'Pix',    contrato:'',    status:'Pago', obs:'Apenas 3 horas'},
+  {id:7,  data:'2026-04-12', cliente:'Claudia Regina',        tipo:'Aniversário Aluna Studio - Diária',valor:1000, pago:1000,   saldo:0,      pgto:'Pix',    contrato:'Sim', status:'',     obs:''},
+  {id:8,  data:'2026-04-19', cliente:'Lidineia de Azevedo',   tipo:'Aniversário 15 anos',              valor:1200, pago:0,      saldo:1200,   pgto:'Pix',    contrato:'',    status:'',     obs:''},
+  {id:12, data:'2026-05-01', cliente:'Nadye Charles',         tipo:'Aniversário',                      valor:950,  pago:950,    saldo:0,      pgto:'Pix',    contrato:'',    status:'Pago', obs:'Pago entrada 10/04'},
+  {id:9,  data:'2026-05-09', cliente:'Miessa',                tipo:'Aniversário 80 anos - Diária',     valor:1200, pago:1200,   saldo:0,      pgto:'Pix',    contrato:'Sim', status:'Pago', obs:'Pago entrada 16/03'},
+  {id:10, data:'2026-05-23', cliente:'Bellartes',             tipo:'Breakfast Mães',                   valor:0,    pago:0,      saldo:0,      pgto:'Pix',    contrato:'',    status:'',     obs:'Bilheteria/Plateia'},
+  {id:15, data:'2026-06-06', cliente:'Poliana Pinheiro Lopes',tipo:'Almoço Batizado',                  valor:1000, pago:500,    saldo:500,    pgto:'Pix',    contrato:'',    status:'',     obs:''},
+  {id:11, data:'2026-06-13', cliente:'Poliane Aparecida',     tipo:'Aniversário - Diária',             valor:1200, pago:800,    saldo:400,    pgto:'Pix',    contrato:'',    status:'',     obs:'Pago entrada 03/03 e 15/03'},
+  {id:13, data:'2026-06-20', cliente:'Paola Nogueira',        tipo:'Aniversário - Diária',             valor:1100, pago:1100,   saldo:0,      pgto:'Pix',    contrato:'Sim', status:'',     obs:''},
+  {id:16, data:'2026-06-28', cliente:'Monica Aquiste Bonfim', tipo:'Aniversário Infantil - Diária',    valor:1200, pago:582.06, saldo:617.94, pgto:'Cartão', contrato:'Sim', status:'',     obs:''},
+  {id:14, data:'2027-03-27', cliente:'Eder Silvio da Cruz',   tipo:'Aniversário 15 anos - Diária',     valor:1200, pago:600,    saldo:600,    pgto:'Pix',    contrato:'Sim', status:'',     obs:''},
+];
+
+const caixa = [
+  {data:'2026-01-01',comp:'2026-01-01',desc:'Pgto - Locação Igreja Final de Ano',cat:'Receita Locação',valor:1300,pgto:'Pix',evento:1,obs:''},
+  {data:'2026-01-10',comp:'2026-01-01',desc:'Internet',cat:'Internet',valor:-69,pgto:'Boleto',evento:'',obs:''},
+  {data:'2026-01-10',comp:'2026-01-01',desc:'Sabesp',cat:'Água',valor:-69,pgto:'Pix',evento:'',obs:''},
+  {data:'2026-01-23',comp:'2026-04-01',desc:'Quitação Leonardo - Evento Religioso 02/04',cat:'Receita Locação',valor:450,pgto:'Pix',evento:6,obs:'Aluguel apenas 3 horas.'},
+  {data:'2026-02-10',comp:'2026-02-01',desc:'Mensalidade Mídia',cat:'Mídia/Mkt',valor:-1200,pgto:'Pix',evento:'',obs:''},
+  {data:'2026-02-10',comp:'2026-02-01',desc:'Limpeza',cat:'Limpeza',valor:-200,pgto:'Pix',evento:'',obs:''},
+  {data:'2026-02-10',comp:'2026-02-01',desc:'Sabesp',cat:'Água',valor:-69,pgto:'Pix',evento:'',obs:''},
+  {data:'2026-02-10',comp:'2026-02-01',desc:'Internet',cat:'Internet',valor:-69,pgto:'Boleto',evento:'',obs:''},
+  {data:'2026-02-15',comp:'2026-02-01',desc:'Festa Fantasia 13/02',cat:'Receita Bilheteria',valor:450,pgto:'Pix',evento:2,obs:''},
+  {data:'2026-03-03',comp:'2026-06-01',desc:'Entrada Poliana - Aniversário 13/06',cat:'Receita Locação',valor:300,pgto:'Pix',evento:15,obs:''},
+  {data:'2026-03-09',comp:'2026-03-01',desc:'Depósito Priscila 30%',cat:'Aporte',valor:217,pgto:'Pix',evento:'',obs:''},
+  {data:'2026-03-09',comp:'2026-03-01',desc:'Depósito Mayara 70%',cat:'Aporte',valor:505.4,pgto:'Pix',evento:'',obs:''},
+  {data:'2026-03-10',comp:'2026-03-01',desc:'Mensalidade Mídia',cat:'Mídia/Mkt',valor:-1200,pgto:'Pix',evento:'',obs:''},
+  {data:'2026-03-10',comp:'2026-03-01',desc:'Sabesp',cat:'Água',valor:-77,pgto:'Pix',evento:'',obs:''},
+  {data:'2026-03-10',comp:'2026-03-01',desc:'Limpeza',cat:'Limpeza',valor:-200,pgto:'Pix',evento:'',obs:''},
+  {data:'2026-03-10',comp:'2026-03-01',desc:'Internet',cat:'Internet',valor:-69,pgto:'Pix',evento:'',obs:''},
+  {data:'2026-03-15',comp:'2026-06-01',desc:'Entrada Poliana - Aniversário 13/06',cat:'Receita Locação',valor:500,pgto:'Dinheiro',evento:15,obs:''},
+  {data:'2026-03-16',comp:'2026-05-01',desc:'Entrada Miessa - Aniversário 09/05',cat:'Receita Locação',valor:360,pgto:'Pix',evento:9,obs:''},
+  {data:'2026-03-20',comp:'2026-04-01',desc:'Entrada Claudia - Aniversário 12/04',cat:'Receita Locação',valor:500,pgto:'Pix',evento:7,obs:''},
+  {data:'2026-04-05',comp:'2026-04-01',desc:'Fogão',cat:'Manutenção',valor:-953.89,pgto:'Cartão',evento:'',obs:''},
+  {data:'2026-04-10',comp:'2026-03-01',desc:'Espetáculo Adilson',cat:'Receita Bilheteria',valor:450,pgto:'Pix',evento:3,obs:''},
+  {data:'2026-04-10',comp:'2026-03-01',desc:'Espetáculo Páscoa',cat:'Receita Bilheteria',valor:720,pgto:'Pix',evento:5,obs:''},
+  {data:'2026-04-10',comp:'2026-04-01',desc:'Mensalidade Mídia',cat:'Mídia/Mkt',valor:-1200,pgto:'Pix',evento:'',obs:''},
+  {data:'2026-04-10',comp:'2026-04-01',desc:'Quitação Claudia - Aniversário 12/04',cat:'Receita Locação',valor:500,pgto:'Pix',evento:7,obs:''},
+  {data:'2026-04-10',comp:'2026-04-01',desc:'Internet',cat:'Internet',valor:-70,pgto:'Pix',evento:'',obs:''},
+  {data:'2026-04-10',comp:'2026-04-01',desc:'Limpeza',cat:'Limpeza',valor:-200,pgto:'Pix',evento:'',obs:''},
+  {data:'2026-04-10',comp:'2026-04-01',desc:'Sabesp',cat:'Água',valor:-77,pgto:'Pix',evento:'',obs:''},
+  {data:'2026-04-10',comp:'2026-05-01',desc:'Entrada Nadye - Aniversário 01/05',cat:'Receita Locação',valor:550,pgto:'Pix',evento:12,obs:''},
+  {data:'2026-04-11',comp:'2026-04-01',desc:'Gás',cat:'Manutenção',valor:-345,pgto:'Pix',evento:'',obs:''},
+  {data:'2026-04-11',comp:'2026-04-01',desc:'Equipamentos Gás',cat:'Manutenção',valor:-157.38,pgto:'Pix',evento:'',obs:''},
+  {data:'2026-04-14',comp:'2026-06-01',desc:'Quitação Paola - Aniversário 20/06',cat:'Receita Locação',valor:1100,pgto:'Pix',evento:13,obs:''},
+  {data:'2026-04-30',comp:'2026-05-01',desc:'Quitação Nadye - Aniversário 01/05',cat:'Receita Locação',valor:400,pgto:'Pix',evento:12,obs:''},
+  {data:'2026-05-07',comp:'2026-05-07',desc:'Quitação Miessa - Aniversário 09/05',cat:'Receita Locação',valor:840,pgto:'Pix',evento:9,obs:''},
+  {data:'2026-05-08',comp:'2026-06-01',desc:'Entrada Poliana Pinheiro - Almoço Batizado 06/06',cat:'Receita Locação',valor:500,pgto:'Pix',evento:15,obs:''},
+  {data:'2026-05-10',comp:'2026-05-10',desc:'Internet',cat:'Internet',valor:-70,pgto:'Pix',evento:'',obs:''},
+  {data:'2026-05-10',comp:'2026-05-10',desc:'Limpeza',cat:'Limpeza',valor:-200,pgto:'Pix',evento:'',obs:''},
+  {data:'2026-05-10',comp:'2026-05-10',desc:'Sabesp',cat:'Água',valor:-77,pgto:'Pix',evento:'',obs:''},
+  {data:'2026-05-10',comp:'2026-05-10',desc:'Mensalidade Mídia',cat:'Mídia/Mkt',valor:-1200,pgto:'Pix',evento:'',obs:''},
+  {data:'2026-05-10',comp:'2026-06-01',desc:'Entrada Monica Aquiste - Aniversário 28/06',cat:'Receita Locação',valor:582.06,pgto:'Cartão',evento:16,obs:''},
+  {data:'2026-05-07',comp:'2027-03-01',desc:'Entrada Eder Silvio - Aniversário 27/03/2027',cat:'Receita Locação',valor:600,pgto:'Pix',evento:14,obs:''},
+];
+
+function log(msg, tipo='ok') {
+  const el = document.getElementById('log');
+  el.innerHTML += `<span class="${tipo}">${msg}</span>\n`;
+  el.scrollTop = el.scrollHeight;
+}
+
+async function iniciarMigracao() {
+  document.getElementById('btnMigrar').disabled = true;
+  document.getElementById('log').innerHTML = '';
+  log('🔥 Conectando ao Firebase...', 'info');
+
+  try {
+    const { initializeApp } = await import('https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js');
+    const { getFirestore, collection, doc, writeBatch, getDocs, deleteDoc } =
+      await import('https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js');
+
+    const app = initializeApp({
+      apiKey: "AIzaSyBxEaAFt5TUu5kJFlk4EePNn3fpRzAckOY",
+      authDomain: "espaco-bellartes.firebaseapp.com",
+      projectId: "espaco-bellartes",
+      storageBucket: "espaco-bellartes.firebasestorage.app",
+      messagingSenderId: "343750357833",
+      appId: "1:343750357833:web:24a90c163d04f18a836098"
+    });
+    const db = getFirestore(app);
+    log('✅ Conectado!', 'ok');
+
+    // Limpar coleções existentes
+    log('\n🗑️  Limpando dados antigos...', 'info');
+    for (const colNome of ['eventos', 'caixa']) {
+      const snap = await getDocs(collection(db, colNome));
+      for (const d of snap.docs) await deleteDoc(doc(db, colNome, d.id));
+      log(`   Coleção "${colNome}" limpa (${snap.size} docs removidos)`, 'info');
+    }
+
+    // Subir eventos
+    log('\n📅 Enviando eventos...', 'info');
+    const b1 = writeBatch(db);
+    eventos.forEach(e => {
+      const {id, ...rest} = e;
+      b1.set(doc(collection(db, 'eventos')), {...rest, id});
+    });
+    await b1.commit();
+    log(`✅ ${eventos.length} eventos enviados com sucesso!`, 'ok');
+
+    // Subir caixa em lotes de 500 (limite do Firestore)
+    log('\n💰 Enviando fluxo de caixa...', 'info');
+    const b2 = writeBatch(db);
+    caixa.forEach(c => {
+      b2.set(doc(collection(db, 'caixa')), c);
+    });
+    await b2.commit();
+    log(`✅ ${caixa.length} lançamentos enviados com sucesso!`, 'ok');
+
+    log('\n🎉 MIGRAÇÃO CONCLUÍDA!', 'ok');
+    log('Pode fechar esta página e abrir o painel normalmente.', 'ok');
+    log('\n👉 Link do painel: seu-usuario.github.io/bellartes', 'info');
+
+    document.getElementById('btnMigrar').textContent = '✅ Concluído!';
+
+  } catch(err) {
+    log('\n❌ ERRO: ' + err.message, 'err');
+    log('Verifique as regras do Firestore e tente novamente.', 'err');
+    document.getElementById('btnMigrar').disabled = false;
+    document.getElementById('btnMigrar').textContent = '🔄 Tentar novamente';
+  }
+}
+</script>
+</body>
+</html>
